@@ -39,6 +39,8 @@ fn create_new_note(app: &tauri::AppHandle) {
     .transparent(true)
     .skip_taskbar(true)
     .title("Note")
+    .maximizable(false)
+    .minimizable(false)
     .build()
     .unwrap();
 

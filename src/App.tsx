@@ -26,11 +26,29 @@ function App() {
   })
 
   useEffect(() => {
+    // listen for rescales
+
     let unlisten: UnlistenFn | undefined = undefined;
     const listen = async () => {
-      unlisten = await appWindow.onResized(({ payload: size }) => {
-        setWidth(size.width - MARGIN);
-        setHeight(size.height - MARGIN);
+      unlisten = await appWindow.onScaleChanged(async ({ payload: scale }) => {
+        console.log(scale)
+      });
+    };
+
+    listen();
+
+    return () => unlisten && unlisten();
+  })
+
+  useEffect(() => {
+    // Listen for resizes
+    let unlisten: UnlistenFn | undefined = undefined;
+    const listen = async () => {
+      unlisten = await appWindow.onResized(async ({ payload: size }) => {
+        const scaleFactor = await appWindow.scaleFactor();
+
+        setWidth(size.toLogical(scaleFactor).width - MARGIN);
+        setHeight(size.toLogical(scaleFactor).height - MARGIN);
       });
     };
 
@@ -43,8 +61,10 @@ function App() {
     if (isLoaded) { return; }
 
     const size = await appWindow.innerSize();
-    setWidth(size.width - MARGIN);
-    setHeight(size.height - MARGIN);
+    const scaleFactor = await appWindow.scaleFactor();
+
+    setWidth(size.toLogical(scaleFactor).width - MARGIN);
+    setHeight(size.toLogical(scaleFactor).height - MARGIN);
 
     setIsLoaded(true);
   }
