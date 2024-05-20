@@ -1,9 +1,9 @@
-import { Pin, PinOff, Plus, Trash } from "lucide-react";
 import "./App.css";
 
 import { appWindow } from '@tauri-apps/api/window';
 import { useEffect, useState } from "react";
 import { UnlistenFn } from "@tauri-apps/api/event";
+import TitleBar from "./components/TitleBar";
 
 const MARGIN: number = 8;
 
@@ -16,7 +16,6 @@ function getRandomHslColor() {
 
 function App() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isPinned, setIsPinned] = useState(false);
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
   const [color, setColor] = useState(getRandomHslColor());
@@ -52,31 +51,7 @@ function App() {
 
   return (
     <div className={['note'].join(' ')} style={{ backgroundColor: color, width: `${width}px`, height: `${height}px` }}>
-      <div
-        className={['header'].join(' ')}
-        onMouseDown={() => {
-
-        }}
-        onMouseMove={() => {
-
-        }}
-        onMouseUp={() => {
-
-        }}
-      >
-        <div className={['leftSide'].join(' ')}>
-          <button className={['iconBtn'].join(' ')} onClick={() => { setIsPinned(!isPinned) }}>
-            {!isPinned
-              ? <Pin width={16} height={16} />
-              : <PinOff width={16} height={16} />
-            }
-          </button>
-        </div>
-        <div className={['rightSide'].join(' ')}>
-          <button className={['iconBtn'].join(' ')}><Plus width={16} height={16} /></button>
-          <button className={['iconBtn'].join(' ')}><Trash width={16} height={16} /></button>
-        </div>
-      </div>
+      <TitleBar />
       <textarea className={['text'].join(' ')}></textarea>
     </div>
   );

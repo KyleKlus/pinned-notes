@@ -14,11 +14,8 @@
 			"all": false,
 			"window": {
 				"all": true,
-				"setSize": true
-			},
-			"shell": {
-				"all": false,
-				"open": true
+				"setSize": true,
+				"startDragging": true
 			}
 		},
 		"systemTray": {
