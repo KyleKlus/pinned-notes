@@ -8,9 +8,12 @@ function TitleBar() {
 
     return (
         <div
-            data-tauri-drag-region
+            data-tauri-drag-region={isPinned ? null : true}
             className={['titleBar'].join(' ')}
-            onDragStart={async () => { await appWindow.startDragging() }}
+            onDragStart={async () => {
+                if (isPinned) { return; }
+                await appWindow.startDragging()
+            }}
         >
             <div className={['leftSide'].join(' ')}>
                 <button className={['iconBtn'].join(' ')} onClick={() => { setIsPinned(!isPinned) }}>
