@@ -13,7 +13,8 @@
 		"allowlist": {
 			"all": false,
 			"window": {
-				"all": true
+				"all": true,
+				"setSize": true
 			},
 			"shell": {
 				"all": false,
@@ -24,9 +25,7 @@
 			"iconPath": "icons/icon.png",
 			"iconAsTemplate": true
 		},
-		"windows": [
-			
-		],
+		"windows": [],
 		"security": {
 			"csp": null
 		},

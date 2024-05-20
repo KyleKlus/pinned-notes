@@ -1,23 +1,84 @@
-import { invoke } from "@tauri-apps/api/tauri";
-import { appWindow, LogicalSize, PhysicalSize } from '@tauri-apps/api/window';
+import { Pin, PinOff, Plus, Trash } from "lucide-react";
 import "./App.css";
-import { Plus } from "lucide-react";
-import { useEffect } from "react";
+
+import { appWindow } from '@tauri-apps/api/window';
+import { useEffect, useState } from "react";
+import { UnlistenFn } from "@tauri-apps/api/event";
+
+const MARGIN: number = 8;
+
+function getRandomHslColor() {
+  const h = Math.floor(Math.random() * 360);
+  const s = 40;
+  const l = 90;
+  return `hsl(${h}, ${s}%, ${l}%)`;
+}
 
 function App() {
-  useEffect(() => {
-    correctDynamicWindowSize();
-  });
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [width, setWidth] = useState(0);
+  const [height, setHeight] = useState(0);
+  const [color, setColor] = useState(getRandomHslColor());
 
-  async function correctDynamicWindowSize() {
-    const size = new PhysicalSize(50, 50);
-    appWindow.setSize(size);
+  useEffect(() => {
+    if (isLoaded) { return; }
+    loadNoteData();
+  })
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined = undefined;
+    const listen = async () => {
+      unlisten = await appWindow.onResized(({ payload: size }) => {
+        setWidth(size.width - MARGIN);
+        setHeight(size.height - MARGIN);
+      });
+    };
+
+    listen();
+
+    return () => unlisten && unlisten();
+  })
+
+  async function loadNoteData() {
+    if (isLoaded) { return; }
+
+    const size = await appWindow.innerSize();
+    setWidth(size.width - MARGIN);
+    setHeight(size.height - MARGIN);
+
+    setIsLoaded(true);
   }
 
   return (
-    <button className='addBtn'>
-      <Plus width={25} height={25}/>
-    </button>
+    <div className={['note'].join(' ')} style={{ backgroundColor: color, width: `${width}px`, height: `${height}px` }}>
+      <div
+        className={['header'].join(' ')}
+        onMouseDown={() => {
+
+        }}
+        onMouseMove={() => {
+
+        }}
+        onMouseUp={() => {
+
+        }}
+      >
+        <div className={['leftSide'].join(' ')}>
+          <button className={['iconBtn'].join(' ')} onClick={() => { setIsPinned(!isPinned) }}>
+            {!isPinned
+              ? <Pin width={16} height={16} />
+              : <PinOff width={16} height={16} />
+            }
+          </button>
+        </div>
+        <div className={['rightSide'].join(' ')}>
+          <button className={['iconBtn'].join(' ')}><Plus width={16} height={16} /></button>
+          <button className={['iconBtn'].join(' ')}><Trash width={16} height={16} /></button>
+        </div>
+      </div>
+      <textarea className={['text'].join(' ')}></textarea>
+    </div>
   );
 }
 
