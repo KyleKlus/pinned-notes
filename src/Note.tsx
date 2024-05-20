@@ -1,4 +1,4 @@
-import "./App.css";
+import "./Note.css";
 
 import { appWindow } from '@tauri-apps/api/window';
 import { useEffect, useState } from "react";
