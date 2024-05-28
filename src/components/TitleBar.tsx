@@ -2,6 +2,7 @@ import { Pin, PinOff, Plus, Trash } from "lucide-react";
 import { useState } from "react";
 import './TitleBar.css';
 import { appWindow } from "@tauri-apps/api/window";
+import { invoke } from '@tauri-apps/api/tauri';
 
 function TitleBar() {
     const [isPinned, setIsPinned] = useState(false);
@@ -24,7 +25,14 @@ function TitleBar() {
                 </button>
             </div>
             <div className={['rightSide'].join(' ')}>
-                <button className={['iconBtn'].join(' ')}><Plus width={16} height={16} /></button>
+                <button
+                    className={['iconBtn'].join(' ')}
+                    onMouseDown={() => {
+                        invoke('create_new_note_from_note');
+                    }}
+                >
+                    <Plus width={16} height={16} />
+                </button>
                 <button className={['iconBtn'].join(' ')}><Trash width={16} height={16} /></button>
             </div>
         </div>

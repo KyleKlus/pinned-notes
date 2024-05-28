@@ -1,7 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use tauri::{CustomMenuItem, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
-mod note_handler;
+mod handlers;
+use crate::handlers::note_handler;
 
 #[tauri::command]
 async fn create_new_note_from_note(app: tauri::AppHandle) {
@@ -32,6 +33,8 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
+
+    note_handler::reopen_all_notes(&app.handle());
 
     app.run(|_, _| {});
 }
