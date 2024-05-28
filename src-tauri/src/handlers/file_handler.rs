@@ -1,120 +1,146 @@
 use crate::handlers::note_handler::Note;
 use directories::ProjectDirs;
+use thiserror::Error;
 
 use serde_json;
-use std::{fmt, fs};
-use tauri::api::file;
+use std::{fs, path::PathBuf};
 
-#[derive(Debug)]
-pub struct NoteCreationError {
-    reason: String,
+// #region public
+
+#[derive(Error, Debug)]
+pub enum LoadNotesError {
+    #[error("load notes error")]
+    IO(#[from] std::io::Error),
+    #[error("load uuids error")]
+    LoadUUIDSError(#[from] LoadUUIDSError),
+    #[error("load note error")]
+    LoadNoteError(#[from] LoadNoteError),
 }
 
-#[derive(Debug)]
-pub struct NoteReadError {
-    reason: String,
-}
-
-impl fmt::Display for NoteCreationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "The creation of a note wasn't possible.\nReason: {}",
-            self.reason
-        )
-    }
-}
-
-pub fn load_notes() -> Result<Vec<Note>, NoteReadError> {
-    // Check if the app directory exists
-    let proj_dirs = match ProjectDirs::from("com", "Kyle Klus", "Notes") {
-        Some(dirs) => dirs,
-        None => {
-            return Err(NoteReadError {
-                reason: "Couldn't find project directory".to_string(),
-            });
-        }
-    };
-
+pub fn load_notes() -> Result<Vec<Note>, LoadNotesError> {
     // Create the app directory if it doesn't exist
-    let path = proj_dirs.data_dir();
-    if !path.exists() {
-        match std::fs::create_dir_all(path) {
-            Ok(_) => return Ok(Vec::new()),
-            Err(e) => {
-                return Err(NoteReadError {
-                        reason: format!("Couldn't create app directory after checking, that a new one is needed: {}", e),
-                    });
-            }
-        }
-    }
-    // TODO: clean this mess
-    let notes_it = std::fs::read_dir(path)
-        .unwrap()
-        .map(|f| {
-            return f.unwrap().path();
-        })
-        .map(|fp| {
-            return std::fs::read_to_string(fp).unwrap();
-        })
-        .map(|fc| {
-            let note: Note = serde_json::from_str(&fc).unwrap();
-            return note;
-        });
+    let path = create_project_dir_if_needed()?;
 
+    let uuids = load_all_note_uuids()?;
     let mut notes = Vec::new();
 
-    for note in notes_it {
-        notes.push(note);
+    for uuid in uuids {
+        let note: Result<Note, LoadNoteError> = load_note(uuid, Some(path.to_path_buf()));
+        notes.push(note?);
     }
 
     return Ok(notes);
 }
 
-pub fn save_note(note: &Note) -> Result<(), NoteCreationError> {
-    // Check if the app directory exists
-    let proj_dirs = match ProjectDirs::from("com", "Kyle Klus", "Notes") {
-        Some(dirs) => dirs,
+#[derive(Error, Debug)]
+pub enum LoadNoteError {
+    #[error("load note error")]
+    IO(#[from] std::io::Error),
+    #[error("parse note error")]
+    ParseError(#[from] serde_json::Error),
+}
+
+pub fn load_note(uuid: String, path: Option<PathBuf>) -> Result<Note, LoadNoteError> {
+    let path = match path {
+        Some(path) => path,
         None => {
-            return Err(NoteCreationError {
-                reason: "Couldn't find project directory".to_string(),
-            });
+            let path = create_project_dir_if_needed()?;
+            path.join(format!("{}.txt", uuid))
         }
     };
 
+    let file_contents = fs::read_to_string(path)?;
+    let note: Note = serde_json::from_str(&file_contents)?;
+
+    return Ok(note);
+}
+
+pub fn delete_note(uuid: String) -> std::io::Result<()> {
+    let project_dirs = get_project_dirs();
+    let path = project_dirs.data_dir();
+    let file_path = path.join(format!("{}.txt", uuid));
+
+    return fs::remove_file(file_path);
+}
+
+#[derive(Error, Debug)]
+pub enum SaveNoteError {
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
+    #[error("parse note error")]
+    ParseError(#[from] serde_json::Error),
+}
+
+pub fn save_note(note: &Note) -> Result<(), SaveNoteError> {
     // Create the app directory if it doesn't exist
-    let path = proj_dirs.data_dir();
-    if !path.exists() {
-        match std::fs::create_dir_all(path) {
-            Ok(_) => (),
-            Err(e) => {
-                return Err(NoteCreationError {
-                        reason: format!("Couldn't create app directory after checking, that a new one is needed: {}", e),
-                    });
-            }
-        }
-    }
+    let path = create_project_dir_if_needed()?;
 
     // Serialize the note to json
-    let json_data = match serde_json::to_string(&note) {
-        Ok(data) => data,
-        Err(e) => {
-            return Err(NoteCreationError {
-                reason: format!("Couldn't parse object to json: {}", e),
-            });
+    let json_data = serde_json::to_string(&note)?;
+
+    // Write the json data to a file
+    fs::write(path.join(format!("{}.txt", &note.uuid)), json_data)?;
+    return Ok(());
+}
+
+#[derive(Error, Debug)]
+pub enum LoadUUIDSError {
+    #[error("data store disconnected")]
+    IO(#[from] std::io::Error),
+}
+
+pub fn load_all_note_uuids() -> Result<Vec<String>, LoadUUIDSError> {
+    // Create the app directory if it doesn't exist
+    let path = create_project_dir_if_needed()?;
+
+    let dir_entries = std::fs::read_dir(path)?;
+    let mut paths = Vec::new();
+
+    for entry in dir_entries {
+        let dir_entry = entry?;
+        if dir_entry.path().is_dir() {
+            // Skip directories (they are notes
+            continue;
+        }
+
+        // Parse uuid from file name
+        let file_name = dir_entry.file_name().into_string();
+        let uuid = match file_name {
+            Ok(uuid) => uuid,
+            Err(_) => {
+                continue;
+            }
+        };
+
+        paths.push(uuid);
+    }
+
+    return Ok(paths);
+}
+
+// #endregion public
+
+// #region helper
+
+fn get_project_dirs() -> ProjectDirs {
+    let proj_dirs: ProjectDirs = match ProjectDirs::from("com", "Kyle Klus", "Notes") {
+        Some(dirs) => dirs,
+        None => {
+            panic!("Couldn't find project directory");
         }
     };
 
-    // Write the json data to a file
-    match fs::write(path.join(format!("{}.txt", &note.uuid)), json_data) {
-        Ok(_) => return Ok(()),
-        Err(e) => {
-            return Err(NoteCreationError {
-                reason: format!(
-                    "Couldn't create app directory after checking, that a new one is needed: {}",
-                    e
-                ),
-            });
-        }
-    }
+    return proj_dirs;
 }
+
+fn create_project_dir_if_needed() -> Result<PathBuf, std::io::Error> {
+    let project_dirs = get_project_dirs();
+    let path = project_dirs.data_dir();
+    if !path.exists() {
+        std::fs::create_dir_all(path)?;
+    }
+
+    return Ok(path.to_path_buf());
+}
+
+// #endregion helper

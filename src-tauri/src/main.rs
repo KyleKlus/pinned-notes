@@ -19,13 +19,10 @@ fn main() {
                     std::process::exit(0);
                 }
                 "add" => {
-                    // TODO: implement window creation
-                    println!("Add note");
                     note_handler::create_new_note(&app);
                 }
                 "clear_notes" => {
-                    // TODO: Implement window deletion
-                    println!("Clear notes");
+                    note_handler::delete_all_notes(&app);
                 }
                 _ => {}
             },
