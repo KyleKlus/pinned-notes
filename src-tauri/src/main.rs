@@ -33,7 +33,12 @@ fn main() {
 
     note_handler::reopen_all_notes(&app.handle());
 
-    app.run(|_, _| {});
+    app.run(|_app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { api, .. } => {
+            api.prevent_exit();
+        }
+        _ => {}
+    });
 }
 
 fn create_system_tray() -> SystemTray {

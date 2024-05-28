@@ -43,13 +43,15 @@ pub enum LoadNoteError {
 pub fn load_note(uuid: String, path: Option<PathBuf>) -> Result<Note, LoadNoteError> {
     let path = match path {
         Some(path) => path,
-        None => {
-            let path = create_project_dir_if_needed()?;
-            path.join(format!("{}.txt", uuid))
-        }
+        None => create_project_dir_if_needed()?
     };
 
-    let file_contents = fs::read_to_string(path)?;
+    let file_path = path.join(format!("{}.txt", uuid));
+
+    let print_file_path = file_path.clone().to_string_lossy().to_string();
+
+
+    let file_contents = fs::read_to_string(file_path).expect(print_file_path.as_str());
     let note: Note = serde_json::from_str(&file_contents)?;
 
     return Ok(note);
@@ -112,7 +114,7 @@ pub fn load_all_note_uuids() -> Result<Vec<String>, LoadUUIDSError> {
             }
         };
 
-        paths.push(uuid);
+        paths.push(uuid.replace(".txt", ""));
     }
 
     return Ok(paths);

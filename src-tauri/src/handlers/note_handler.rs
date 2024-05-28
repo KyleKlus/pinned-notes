@@ -1,5 +1,5 @@
 use hsl::HSL;
-use rand::Rng;
+use rand::{seq::index, Rng};
 use serde::{Deserialize, Serialize};
 use tauri::{LogicalSize, Manager, PhysicalPosition, Position, Size, Window};
 use uuid::Uuid;
@@ -59,14 +59,18 @@ pub fn reopen_note(app: &tauri::AppHandle, note: &Note) {
 }
 
 pub fn delete_all_notes(app: &tauri::AppHandle) {
+    let uuids = file_handler::load_all_note_uuids().unwrap();
+
     // close all windows
     let windows = app.windows();
-    for window in windows   {
-        window.1.close().unwrap();
+    for window in windows {
+        let window_uuid = window.1.label();
+        if !uuids.iter().position(|r| r == window_uuid).is_none() {
+            window.1.close().unwrap();
+        }
     }
 
     // delete all notes
-    let uuids = file_handler::load_all_note_uuids().unwrap();
     for uuid in uuids {
         file_handler::delete_note(uuid).unwrap();
     }
