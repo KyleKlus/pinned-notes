@@ -15,7 +15,8 @@ pub struct Note {
     pub color: String,
     pub text: String,
     pub pinned: bool,
-    pub position: (i32, i32),
+    pub x: i32,
+    pub y: i32,
 }
 
 // #region public
@@ -32,7 +33,8 @@ pub fn create_new_note(app: &tauri::AppHandle) {
         color: get_random_color(),
         text: "".to_string(),
         pinned: false,
-        position: (note_position.x, note_position.y),
+        x: note_position.x,
+        y: note_position.y,
     };
 
     file_handler::save_note_to_file(&new_note).unwrap();
@@ -53,8 +55,8 @@ pub fn reopen_note(app: &tauri::AppHandle, note: &Note) {
 
     note_window
         .set_position(Position::Physical(PhysicalPosition {
-            x: note.position.0,
-            y: note.position.1,
+            x: note.x,
+            y: note.y,
         }))
         .unwrap();
 

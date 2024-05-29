@@ -27,10 +27,12 @@ async fn save_note(note: Note) {
 
 fn main() {
     let app: tauri::App = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![create_new_note_from_note])
-        .invoke_handler(tauri::generate_handler![delete_note])
-        .invoke_handler(tauri::generate_handler![load_note])
-        .invoke_handler(tauri::generate_handler![save_note])
+        .invoke_handler(tauri::generate_handler![
+            create_new_note_from_note,
+            delete_note,
+            load_note,
+            save_note
+        ])
         .system_tray(create_system_tray())
         .on_system_tray_event(|app, event| match event {
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
