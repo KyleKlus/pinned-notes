@@ -149,8 +149,8 @@ fn get_random_color() -> String {
     let mut rng = rand::thread_rng();
     let random_hsl_color = HSL {
         h: rng.gen_range(0.0..360.0),
-        s: 40.0,
-        l: 90.0,
+        s: 0.4,
+        l: 0.9,
     };
     let random_color = random_hsl_color.to_rgb();
 
