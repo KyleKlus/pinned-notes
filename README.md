@@ -1,27 +1,32 @@
-# pinned-notes
+# Pinned Notes
+
+
 This is a desktop application, which adds quickly editable, pinable notes to the desktop.
 
 ## Changelog
 
+- [v1.0.0]() Added basic functions so that it is a minimum viable product
+
 ## TODO
 
-- [ ] Create floating add button
-	- [ ] Styling
-	- [ ] Function
+- [x] Create system tray
+	- [x] Styling
+	- [x] Function
 - [ ] Create a note
-	- [ ] Save config & data
-		- [ ] In doc/pin_notes
+	- [x] Save config & data
+		- [x] In doc/pin_notes
 	- [ ] Styling
-		- [ ] Random color
-		- [ ] No window borders
+		- [x] Random color
+		- [x] No window borders
 		- [ ] Color change btn
-		- [ ] pin btn
-		- [ ] delete btn
+		- [x] pin btn
+		- [x] add btn
+		- [x] delete btn
 		- [ ] edit btn
 	- [ ] Colorable
-	- [ ] Editable
+	- [x] Editable
 	- [ ] resizeable
-- [ ] Delete a note
-- [ ] Pin a note
+- [x] Delete a note
+- [x] Pin a note
 - [ ] Add markdown functionality
-
+- [ ] Toggle option for running as autostart

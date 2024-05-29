@@ -21,21 +21,6 @@ function App() {
   })
 
   useEffect(() => {
-    // listen for rescales
-
-    let unlisten: UnlistenFn | undefined = undefined;
-    const listen = async () => {
-      unlisten = await appWindow.onScaleChanged(async ({ payload: scale }) => {
-        console.log(scale)
-      });
-    };
-
-    listen();
-
-    return () => unlisten && unlisten();
-  })
-
-  useEffect(() => {
     // Listen for resizes
     let unlisten: UnlistenFn | undefined = undefined;
     const listen = async () => {
@@ -114,7 +99,6 @@ function App() {
             onChange={(e) => {
               if (note === undefined) { return; }
               const updatedNote: INote = { ...note, text: e.target.value };
-              console.log(updatedNote);
               invoke('save_note', { note: updatedNote });
               setNote(updatedNote);
             }}
