@@ -1,10 +1,13 @@
 use hsl::HSL;
-use rand::{seq::index, Rng};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use tauri::{LogicalSize, Manager, PhysicalPosition, Position, Size, Window};
+use thiserror::Error;
 use uuid::Uuid;
 
 use crate::handlers::file_handler;
+
+use super::file_handler::{LoadNoteError, LoadUUIDSError, SaveNoteError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Note {
@@ -32,7 +35,7 @@ pub fn create_new_note(app: &tauri::AppHandle) {
         position: (note_position.x, note_position.y),
     };
 
-    file_handler::save_note(&new_note).unwrap();
+    file_handler::save_note_to_file(&new_note).unwrap();
 
     note_window.show().unwrap();
 }
@@ -58,22 +61,57 @@ pub fn reopen_note(app: &tauri::AppHandle, note: &Note) {
     note_window.show().unwrap();
 }
 
-pub fn delete_all_notes(app: &tauri::AppHandle) {
-    let uuids = file_handler::load_all_note_uuids().unwrap();
+pub fn load_note(uuid: &String) -> Result<Note, LoadNoteError> {
+    return file_handler::load_note(uuid, None);
+}
 
-    // close all windows
-    let windows = app.windows();
-    for window in windows {
-        let window_uuid = window.1.label();
-        if !uuids.iter().position(|r| r == window_uuid).is_none() {
-            window.1.close().unwrap();
-        }
-    }
+pub fn update_note(note: &Note) -> Result<(), SaveNoteError> {
+    return file_handler::save_note_to_file(note);
+}
+
+#[derive(Error, Debug)]
+pub enum DeleteAllNotesError {
+    #[error(transparent)]
+    LoadUUIDSError(#[from] LoadUUIDSError),
+    #[error(transparent)]
+    DeleteNoteError(#[from] DeleteNoteError),
+}
+
+pub fn delete_all_notes(app: &tauri::AppHandle) -> Result<(), DeleteAllNotesError> {
+    let uuids = file_handler::load_all_note_uuids()?;
 
     // delete all notes
     for uuid in uuids {
-        file_handler::delete_note(uuid).unwrap();
+        delete_note(app, &uuid)?;
     }
+
+    return Ok(());
+}
+
+#[derive(Error, Debug)]
+pub enum DeleteNoteError {
+    #[error("Delete note file didn't work")]
+    IO(#[from] std::io::Error),
+    #[error("Note not found with uuid:{}", uuid)]
+    NoteNotFound { uuid: String },
+}
+
+pub fn delete_note(app: &tauri::AppHandle, uuid: &String) -> Result<(), DeleteNoteError> {
+    use DeleteNoteError::*;
+    // close all windows
+    let app_windows = app.windows();
+    let uuid_window = app_windows.get_key_value(uuid);
+    match uuid_window {
+        Some(window) => window.1.close().unwrap(),
+        None => {
+            return Err(NoteNotFound {
+                uuid: uuid.to_string(),
+            })
+        }
+    }
+
+    file_handler::delete_note_file(uuid)?;
+    return Ok(());
 }
 
 // #endregion public

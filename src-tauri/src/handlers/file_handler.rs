@@ -25,7 +25,7 @@ pub fn load_notes() -> Result<Vec<Note>, LoadNotesError> {
     let mut notes = Vec::new();
 
     for uuid in uuids {
-        let note: Result<Note, LoadNoteError> = load_note(uuid, Some(path.to_path_buf()));
+        let note: Result<Note, LoadNoteError> = load_note(&uuid, Some(path.to_path_buf()));
         notes.push(note?);
     }
 
@@ -40,24 +40,20 @@ pub enum LoadNoteError {
     ParseError(#[from] serde_json::Error),
 }
 
-pub fn load_note(uuid: String, path: Option<PathBuf>) -> Result<Note, LoadNoteError> {
+pub fn load_note(uuid: &String, path: Option<PathBuf>) -> Result<Note, LoadNoteError> {
     let path = match path {
         Some(path) => path,
-        None => create_project_dir_if_needed()?
+        None => create_project_dir_if_needed()?,
     };
-
     let file_path = path.join(format!("{}.txt", uuid));
 
-    let print_file_path = file_path.clone().to_string_lossy().to_string();
-
-
-    let file_contents = fs::read_to_string(file_path).expect(print_file_path.as_str());
+    let file_contents = fs::read_to_string(file_path)?;
     let note: Note = serde_json::from_str(&file_contents)?;
 
     return Ok(note);
 }
 
-pub fn delete_note(uuid: String) -> std::io::Result<()> {
+pub fn delete_note_file(uuid: &String) -> std::io::Result<()> {
     let project_dirs = get_project_dirs();
     let path = project_dirs.data_dir();
     let file_path = path.join(format!("{}.txt", uuid));
@@ -73,7 +69,7 @@ pub enum SaveNoteError {
     ParseError(#[from] serde_json::Error),
 }
 
-pub fn save_note(note: &Note) -> Result<(), SaveNoteError> {
+pub fn save_note_to_file(note: &Note) -> Result<(), SaveNoteError> {
     // Create the app directory if it doesn't exist
     let path = create_project_dir_if_needed()?;
 
