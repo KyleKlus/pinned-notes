@@ -5,6 +5,8 @@ use tauri::{LogicalSize, Manager, PhysicalPosition, Position, Size, Window};
 use thiserror::Error;
 use uuid::Uuid;
 
+const MARGIN: i32 = 8;
+
 use crate::handlers::file_handler;
 
 use super::file_handler::{LoadNoteError, LoadUUIDSError, SaveNoteError};
@@ -15,8 +17,10 @@ pub struct Note {
     pub color: String,
     pub text: String,
     pub pinned: bool,
-    pub x: i32,
-    pub y: i32,
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
 }
 
 // #region public
@@ -27,14 +31,20 @@ pub fn create_new_note(app: &tauri::AppHandle) {
     let note_window = open_note_window(app, &new_uuid);
 
     let note_position = note_window.outer_position().unwrap();
+    let note_size = note_window
+        .inner_size()
+        .unwrap()
+        .to_logical(note_window.scale_factor().unwrap());
 
     let new_note = Note {
         uuid: new_uuid,
         color: get_random_color(),
         text: "".to_string(),
         pinned: false,
-        x: note_position.x,
-        y: note_position.y,
+        x: f64::from(note_position.x),
+        y: f64::from(note_position.y),
+        width: note_size.width,
+        height: note_size.height,
     };
 
     file_handler::save_note_to_file(&new_note).unwrap();
@@ -55,8 +65,15 @@ pub fn reopen_note(app: &tauri::AppHandle, note: &Note) {
 
     note_window
         .set_position(Position::Physical(PhysicalPosition {
-            x: note.x,
-            y: note.y,
+            x: convert_to_i32(note.x),
+            y: convert_to_i32(note.y),
+        }))
+        .unwrap();
+
+    note_window
+        .set_size(Size::Logical(LogicalSize {
+            width: note.width + f64::from(MARGIN),
+            height: note.height + f64::from(MARGIN),
         }))
         .unwrap();
 
@@ -160,6 +177,20 @@ fn get_random_color() -> String {
         "#{:02X}{:02X}{:02X}",
         random_color.0, random_color.1, random_color.2
     );
+}
+
+fn convert_to_i32(x: f64) -> i32 {
+    // Round the floating-point number to the nearest integer
+    let rounded = x.round() as i32;
+
+    // Handle potential overflow
+    if rounded > i32::MAX {
+        i32::MAX
+    } else if rounded < i32::MIN {
+        i32::MIN
+    } else {
+        rounded
+    }
 }
 
 // #endregion helper

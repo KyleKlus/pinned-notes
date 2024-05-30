@@ -1,7 +1,7 @@
 import "./Note.css";
 
 import { appWindow } from '@tauri-apps/api/window';
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UnlistenFn } from "@tauri-apps/api/event";
 import TitleBar from "./components/TitleBar";
 import INote from "./interfaces/INote";
@@ -11,9 +11,15 @@ const MARGIN: number = 8;
 
 function App() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [note, setNote] = useState<INote | undefined>(undefined);
-  const [width, setWidth] = useState(0);
-  const [height, setHeight] = useState(0);
+  const [pinned, setPinned] = useState(false);
+  const [uuid, setUUID] = useState('');
+  const [text, setText] = useState('');
+  const [color, setColor] = useState('');
+  const [position, setPosition] = useState<{ x: number, y: number }>({ x: 0, y: 0 });
+  const [size, setSize] = useState<{ width: number, height: number }>({ width: 0, height: 0 });
+
+  const lastSaveCall = useRef<Date | undefined>(undefined);
+
 
   useEffect(() => {
     if (isLoaded) { return; }
@@ -21,14 +27,40 @@ function App() {
   })
 
   useEffect(() => {
+    // Listen for save requests
+    if (lastSaveCall.current === undefined) { return; }
+
+    const saveIntervall = setInterval(() => {
+      // Check if last save call is older than 5s
+      const now = new Date();
+      if (
+        lastSaveCall.current === undefined ||
+        now.getTime() - lastSaveCall.current.getTime() < 5000
+      ) { return; }
+
+      // Save note
+      const note: INote = exportStateToNote();
+      invoke('save_note', { note: note });
+
+      // Reset last save call
+      lastSaveCall.current = undefined;
+      clearInterval(saveIntervall)
+    }, 1000);
+    return () => clearInterval(saveIntervall);
+  })
+
+  useEffect(() => {
     // Listen for resizes
     let unlisten: UnlistenFn | undefined = undefined;
     const listen = async () => {
       unlisten = await appWindow.onResized(async ({ payload: size }) => {
-        const scaleFactor = await appWindow.scaleFactor();
+        // Save note 5s after the last onResize
+        const now = new Date();
+        lastSaveCall.current = now;
 
-        setWidth(size.toLogical(scaleFactor).width - MARGIN);
-        setHeight(size.toLogical(scaleFactor).height - MARGIN);
+        // Update size
+        const scaleFactor = await appWindow.scaleFactor();
+        setSize({ width: size.toLogical(scaleFactor).width - MARGIN, height: size.toLogical(scaleFactor).height - MARGIN });
       });
     };
 
@@ -42,15 +74,12 @@ function App() {
     let unlisten: UnlistenFn | undefined = undefined;
     const listen = async () => {
       unlisten = await appWindow.onMoved(async ({ payload: position }) => {
-        if (note === undefined) { return; }
-        const updatedNote: INote = {
-          ...note,
-          x: position.x,
-          y: position.y
-        };
+        // Save note 5s after the last onMove
+        const now = new Date();
+        lastSaveCall.current = now;
 
-        invoke('save_note', { note: updatedNote });
-        setNote(updatedNote);
+        // Update position
+        setPosition({ x: position.x, y: position.y });
       });
     };
 
@@ -63,17 +92,31 @@ function App() {
     if (isLoaded) { return; }
 
     const uuid: string = appWindow.label;
-
     const note: INote = (await invoke('load_note', { uuid: uuid })) as INote;
 
-    const size = await appWindow.innerSize();
-    const scaleFactor = await appWindow.scaleFactor();
-
-    setWidth(size.toLogical(scaleFactor).width - MARGIN);
-    setHeight(size.toLogical(scaleFactor).height - MARGIN);
-    setNote(note);
+    setPinned(note.pinned);
+    setUUID(note.uuid);
+    setText(note.text);
+    setColor(note.color);
+    setSize({ width: note.width, height: note.height });
+    setPosition({ x: note.x, y: note.y });
 
     setIsLoaded(true);
+  }
+
+  function exportStateToNote(): INote {
+    const note: INote = {
+      pinned: pinned,
+      uuid: uuid,
+      text: text,
+      color: color,
+      x: position.x,
+      y: position.y,
+      width: size.width,
+      height: size.height
+    };
+
+    return note;
   }
 
   return (
@@ -81,26 +124,24 @@ function App() {
       {isLoaded
         ? <div
           className={['note'].join(' ')}
-          style={{ backgroundColor: note?.color, width: `${width}px`, height: `${height}px` }
-          }
+          style={{ backgroundColor: color, width: `${size.width}px`, height: `${size.height}px` }}
         >
           <TitleBar
-            note={note}
+            pinned={pinned}
+            uuid={uuid}
             setIsPinned={async (state: boolean) => {
-              if (note === undefined) { return; }
-              const updatedNote: INote = { ...note, pinned: state };
+              setPinned(state);
+              const updatedNote = exportStateToNote();
               await invoke('save_note', { note: updatedNote });
-              setNote(updatedNote);
             }}
           />
           <textarea
             className={['text'].join(' ')}
-            value={note?.text}
+            value={text}
             onChange={(e) => {
-              if (note === undefined) { return; }
-              const updatedNote: INote = { ...note, text: e.target.value };
+              setText(e.target.value);
+              const updatedNote = exportStateToNote();
               invoke('save_note', { note: updatedNote });
-              setNote(updatedNote);
             }}
           />
         </div >

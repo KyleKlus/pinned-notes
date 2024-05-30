@@ -4,5 +4,8 @@ export default interface INote {
     text: string,
     pinned: boolean,
     x: number,
-    y: number
+    y: number,
+    width: number,
+    height: number,
+    
 }
